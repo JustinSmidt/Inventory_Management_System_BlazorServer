@@ -1,0 +1,144 @@
+﻿<div class="form-group">
+    <label for="search">@Label</label>
+    <input type="text" class="form-control" @bind-value="userInput" @bind-value:event="oninput" @onkeyup="OnPressKeys"/>  @*we are going to react to it while typing, thus we need to modify the behavior of the binding with event="oninput"*@
+</div>
+
+
+@if(searchResults != null && searchResults.Count > 0)
+{
+    <div class="search-result">
+        <ul>
+            @{
+                int itemIndex = 0;  //so that we can highlight selected item when using arrows
+
+                foreach (var item in searchResults)
+                {                                           //if its equal, set it to class(selected), else, empty
+                    <li @key="item.Id" class="@(itemIndex == currentItemIndex? "selected":"")" @onclick="@(() => OnSelectItem(item))">@item.Name</li>
+                    itemIndex++;
+                }
+            }
+        </ul>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public string Label { get; set; } = string.Empty;                       //remember, it needs to be generic as we want to make it reusable not just for inventory, but for product etc
+
+    [Parameter]
+    public Func<string, Task<List<ItemViewModel>>>? SearchFunction { get; set; }       //here we will need to use a view modal. We are telling the func delegate that delegate func paramater is a string type and return type is a list of viewModal   
+                                                                                       //func delegate has a string paramater, and returns List<Itemviewmodal> type
+    private List<ItemViewModel>? searchResults = null;
+
+
+    //to let parent know that item is selected
+    [Parameter]
+    public EventCallback<ItemViewModel> OnItemSelected { get; set; }
+
+
+    //we need a variable that will represent selected item, because when searching, we want to be able to select the item that shows up after search
+    private ItemViewModel? selectedItem = null;
+
+    private ItemViewModel? currentItem = null;
+
+    private int currentItemIndex = -1;  //if it started by 0, then the first search result will be instantly highlighted, which we dont want. It should only highligh when we press down, and when we press down, it will increment changing it to 0, then the result will be highlighted
+
+    private string _userInput = string.Empty;
+
+
+    public string userInput 
+    { 
+        get => _userInput; 
+        set
+        {
+            _userInput = value;
+
+            if(!string.IsNullOrWhiteSpace(_userInput) && SearchFunction != null)
+            {
+                if(this.selectedItem?.Name != _userInput)     //helps us hide the <li> when we press enter on a selected item after using arrows etc.
+                {                                                    //above if statement - if selecteditem = userinput, then hide list
+                    ViewItemsAsync();
+                }
+
+            }
+            else    //if there is null or white spaces in input box, then hide the list results
+            {
+                ClearCurrentItem();
+            }
+        }
+    } 
+
+    //to make it support async call
+    private async Task ViewItemsAsync()
+    {
+        if(SearchFunction != null)
+        {
+            searchResults = await SearchFunction(_userInput);   
+
+            this.selectedItem = null;
+
+            StateHasChanged();
+        }
+        
+    }
+
+
+
+    private void OnSelectItem(ItemViewModel? item)
+    {
+        ClearCurrentItem();
+
+        if(item != null)          //if we search bke, we will get records cintaining it like bike wheel and bike body, but when we select an item from search result, we want to change the userinput to the record that we selected
+        {
+            this.selectedItem = item;
+            this.userInput = item.Name;
+
+            //this is where we trigger event in whic item is selected
+            OnItemSelected.InvokeAsync(item);
+        }
+    }
+
+    private void ClearCurrentItem()
+    {
+        searchResults = null;
+        currentItem = null;           //so that highlight disapears when searching again
+        currentItemIndex = -1;
+    }
+
+    public class ItemViewModel
+    {
+        public int Id { get; set; }
+
+        public string Name { get; set; } = string.Empty;
+    }
+
+    private void OnPressKeys(KeyboardEventArgs e)
+    {
+        if((e.Code == "ArrowDown" || e.Code == "ArrowUp") && searchResults != null && searchResults.Count > 0)
+        {
+            if(e.Code == "ArrowDown" && currentItemIndex < searchResults.Count - 1)
+            {
+                currentItem = searchResults[currentItemIndex + 1];         //index starts at -1. If you plus one, it changes to zero
+                currentItemIndex++;
+            }
+            else if (e.Code == "ArrowUp")
+            {
+                if(currentItemIndex > 0)
+                {
+                    currentItem = searchResults[currentItemIndex -1];         //index starts at -1. If you plus one, it changes to zero
+                    currentItemIndex--;
+                }
+                else    //if we are on first record, and we want to move up, then results should dissapear, thus when index goes below 0
+                {
+                    currentItem = null;
+                    currentItemIndex = -1;            
+                }
+            }
+
+        }
+        if (e.Code == "Enter" || e.Code == "NumpadEnter")
+        {
+            OnSelectItem(currentItem);
+        }
+    }
+}

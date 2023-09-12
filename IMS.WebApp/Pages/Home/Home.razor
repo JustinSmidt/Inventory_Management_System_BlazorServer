@@ -1,0 +1,70 @@
+﻿@page "/"
+
+@inject NavigationManager NavigationManager
+
+
+@*<div class="button-layout">
+    <button class = "main-buttons">Inventory</button>
+    <button class="main-buttons">Product</button>
+    <button class="main-buttons">Purchase Inventory</button>
+    <button class="main-buttons">Produce Product</button>
+    
+</div>
+
+<div class="button-layout layout-2">
+    <button class="main-buttons">Sell Product</button>
+    <button class="main-buttons">Inventory Transaction Report</button>
+    <button class="main-buttons">Product Transaction Report</button>
+</div>*@
+
+<div class="button-layout">
+ 
+    <div class="button-layout layout-1">
+    <button class="main-buttons btn1" @onclick="InventoriesPage">Inventories</button>
+    <button class="main-buttons btn2" @onclick="ProdPage">Product</button>
+    <button class="main-buttons btn3" @onclick="PurInvPage">Purchase Inventory</button>
+    <button class="main-buttons btn4" @onclick="ProdProdPage">Produce Product</button>
+    </div>
+
+    <div class="button-layout layout-2">
+        <button class="main-buttons btn5" @onclick="SellProdPage">Sell Product</button>
+        <button class="main-buttons btn6" @onclick="InvTranRepPage">Inventory Transaction Report</button>
+        <button class="main-buttons btn7" @onclick="ProdTranRepPage">Product Transaction Report</button>
+    </div>
+</div>
+@code {
+    private void InventoriesPage()
+    {
+        NavigationManager.NavigateTo("/inventories");
+    }
+
+    private void ProdPage()
+    {
+        NavigationManager.NavigateTo("/products");
+    }
+
+    private void PurInvPage()
+    {
+        NavigationManager.NavigateTo("/purchase");
+    }
+
+    private void ProdProdPage()
+    {
+        NavigationManager.NavigateTo("/produce");
+    }
+
+    private void SellProdPage()
+    {
+        NavigationManager.NavigateTo("/sell");
+    }
+
+    private void InvTranRepPage()
+    {
+        NavigationManager.NavigateTo("/inventoryreport");
+    }
+
+    private void ProdTranRepPage()
+    {
+        NavigationManager.NavigateTo("/productreport");
+    }
+}

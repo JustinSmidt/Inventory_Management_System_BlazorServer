@@ -1,0 +1,27 @@
+﻿@page "/products"
+@inject NavigationManager navigationManager
+
+@attribute [Authorize(Policy = "User")]
+
+<h3>Product List</h3>
+<br />
+<SearchProductComponent OnSearchProduct="OnProductSearch"></SearchProductComponent>
+<br />
+<ProductListComponent SearchTerm="@searchTerm"></ProductListComponent>
+
+<button type="button" class="btn btn-primary" @onclick="AddProduct">Add Product</button>
+
+@code {
+    private string searchTerm = string.Empty;
+
+    public void OnProductSearch(string searchTerm)  //this searchterm is the one that the use input, its coming from SearchProductComponent above
+    {
+        this.searchTerm = searchTerm;
+    }
+
+    public void AddProduct()
+    {
+        navigationManager.NavigateTo("/addproduct");
+    }
+
+}

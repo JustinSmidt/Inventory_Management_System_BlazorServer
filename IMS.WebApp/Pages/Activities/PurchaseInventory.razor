@@ -1,0 +1,124 @@
+﻿@page "/purchase"
+
+@using static IMS.WebApp.Controls.Common.AutoCompleteComponent;
+@inject IViewInventoriesByNameUseCase ViewInventoriesByNameUseCase
+@inject IViewInventoryByIdUseCase ViewInventoryByIdUseCase
+@inject IPurchaseInventoryUseCase PurchaseInventoryUseCase
+
+@attribute [Authorize(Policy = "User")]
+
+<h3>Purchase Inventory</h3>
+<br />
+
+@inject IJSRuntime JSRuntime
+
+<EditForm id = "purchase-form" Model="purchaseViewModel" OnValidSubmit="Purchase">
+    <DataAnnotationsValidator></DataAnnotationsValidator>
+    <ValidationSummary></ValidationSummary>
+
+    <div class="form-group">
+        <label for="po">Purchase Order #</label>
+        <InputText id="po" @bind-Value="purchaseViewModel.PONumber" class="form-control"></InputText>  @*with inputText, use capital V for @bind-Value, in normal input, small v will do, there is a difference between the 2*@
+    </div>
+   
+    <br />
+
+    <div class="card">
+        <div class="card-body">
+            <div class="form-group">
+                <AutoCompleteComponent Label="Inventory to Purchase"
+                                       SearchFunction="SearchInventory"
+                                       OnItemSelected="OnItemSelected"></AutoCompleteComponent>
+                                       <input type="hidden" value="@purchaseViewModel.InventoryId" />
+                                       
+                @if (purchaseViewModel.InventoryId > 0 && purchaseViewModel.InventoryPrice >= 0)
+                {
+                    <br />
+                    <text>Price: </text>
+                    @purchaseViewModel.InventoryPrice.ToString("c");                  
+                }
+            </div>
+        </div>
+    </div>
+
+    <br />
+
+    <div class="form-group">
+        <label for="qty">Quantity</label>
+        <InputNumber id="qty" @bind-Value="purchaseViewModel.QuantityToPurchase" class="form-control"></InputNumber>  @*with inputText, use capital V for @bind-Value, in normal input, small v will do, there is a difference between the 2*@
+    </div>
+
+    <br />
+
+    <button type="submit" class="btn btn-primary">Purchase</button>
+</EditForm>
+
+
+@code {
+
+    private AuthenticationState? authenticationState;
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? authenticationStateTask { get; set; }
+
+    private PurchaseViewModel purchaseViewModel = new PurchaseViewModel();
+
+    private Inventory? selectedInventory = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (authenticationStateTask != null)
+        {
+            authenticationState = await authenticationStateTask;
+        }
+
+    }
+
+
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        base.OnAfterRender(firstRender);
+
+        if(firstRender)
+        {
+            JSRuntime.InvokeVoidAsync("PreventFormSubmission", "purchase-form");     //parameter - first one is javascript function, second one is parameter that we want to pass to the function
+        }
+    }
+
+    private async Task Purchase()
+    {     
+        if (authenticationState != null && !string.IsNullOrWhiteSpace(authenticationState.User?.Identity?.Name) && this.selectedInventory != null)
+        {
+            await PurchaseInventoryUseCase.ExecuteAsync(this.purchaseViewModel.PONumber, this.selectedInventory, this.purchaseViewModel.QuantityToPurchase, authenticationState.User.Identity.Name);
+
+        }
+        //to allow users to continue purchasing inventory
+        this.purchaseViewModel = new PurchaseViewModel();
+        this.selectedInventory = null;
+    }
+
+    private async Task<List<ItemViewModel>?> SearchInventory(string name)      //return type is List<ItemViewModal>
+    {
+        var list = await ViewInventoriesByNameUseCase.ExecuteAsync(name);
+
+        if (list == null)
+        {
+            return null;
+        }
+        //changing var list type to list<itemviewmodal> type using Select
+        return list.Select(x => new ItemViewModel { Id = x.InventoryId, Name = x.InventoryName })?.ToList();  //here, we are changing list to list of ItemViewModal, because that is the return type
+    }
+
+    private async Task OnItemSelected(ItemViewModel item)   //we need to populate everything when we select an item
+    {
+        this.selectedInventory = await ViewInventoryByIdUseCase.ExecuteAsync(item.Id);
+
+        purchaseViewModel.InventoryId = item.Id;
+
+        purchaseViewModel.InventoryPrice = this.selectedInventory.Price;
+
+        
+    }
+
+}
